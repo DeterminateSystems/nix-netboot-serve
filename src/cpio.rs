@@ -28,10 +28,10 @@ impl CpioCache {
 
     pub async fn dump_cpio(&self, path: PathBuf) -> Result<Cpio, CpioError> {
         if let Some(cpio) = self.get_cached(&path) {
-            info!("Found CPIO in the memory cache {:?}", path);
+            trace!("Found CPIO in the memory cache {:?}", path);
             return Ok(cpio);
         } else if let Ok(cpio) = self.get_directory_cached(&path).await {
-            info!("Found CPIO in the directory cache {:?}", path);
+            trace!("Found CPIO in the directory cache {:?}", path);
             return Ok(cpio);
         } else {
             info!("Making a new CPIO for {:?}", path);

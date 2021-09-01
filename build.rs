@@ -4,9 +4,14 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 fn main() -> Result<(), FindErr> {
+    let basename = find_cmd("basename")?;
+    let bash = find_cmd("bash")?;
     let cpio = find_cmd("cpio")?;
     let find = find_cmd("find")?;
-    let bash = find_cmd("bash")?;
+    let mkdir = find_cmd("mkdir")?;
+    let mktemp = find_cmd("mktemp")?;
+    let nix_store = find_cmd("nix-store")?;
+    let rm = find_cmd("rm")?;
     let sort = find_cmd("sort")?;
     let zstd = find_cmd("zstd")?;
 
@@ -30,9 +35,14 @@ pub fn verify_exists() -> Result<(), String> {{
         }}
     }};
 
+    check("{basename}")?;
+    check("{bash}")?;
     check("{cpio}")?;
     check("{find}")?;
-    check("{bash}")?;
+    check("{mkdir}")?;
+    check("{mktemp}")?;
+    check("{nix_store}")?;
+    check("{rm}")?;
     check("{sort}")?;
     check("{zstd}")?;
     Ok(())
@@ -44,11 +54,39 @@ pub fn cpio_command(src_path: &Path, dest_path: &Path) -> Command {{
     cmd.arg(r#"
 set -eu
 set -o pipefail
-cd /
-{find} ".$1" -print0 \
-        | {sort} -z \
-        | {cpio} -o -H newc -R +0:+1 --reproducible --null \
-        | {zstd} --compress --stdout -19 > "$2"
+
+source=$1
+dest=$2
+export PATH="/dev/null"
+
+scratch=$({mktemp} -d -t tmp.XXXXXXXXXX)
+function finish {{
+  {rm} -rf "$scratch"
+}}
+trap finish EXIT
+
+{{
+    {{
+        # Make the cpio for the store path
+        cd /
+        {find} ".$source" -print0 \
+            | {sort} -z \
+            | {cpio} -o -H newc -R +0:+1 --reproducible --null
+    }}
+
+    {{
+        # Make a new file at /nix/.nix-netboot-serve-db/registration/<<basename store-path>> so we can register it later
+        cd "$scratch"
+        regdir="./nix/.nix-netboot-serve-db/registration/"
+        regpath="$regdir/$({basename} "$source")"
+        {mkdir} -p "$regdir"
+        {nix_store} --dump-db "$source" > "$regpath"
+
+        {find} "$regpath" -print0 \
+            | {sort} -z \
+            | {cpio} -o -H newc -R +0:+1 --reproducible --null
+    }}
+}} | {zstd} --compress --stdout -19 > "$2"
 "#);
     cmd.arg("--");
     cmd.arg(src_path);
@@ -57,9 +95,14 @@ cd /
     cmd
 }}
         "##,
+            basename = basename.to_str().expect("basename path is not utf8 clean"),
+            bash = bash.to_str().expect("bash path is not utf8 clean"),
             cpio = cpio.to_str().expect("cpio path is not utf8 clean"),
             find = find.to_str().expect("find path is not utf8 clean"),
-            bash = bash.to_str().expect("bash path is not utf8 clean"),
+            mkdir = mkdir.to_str().expect("mkdir path is not utf8 clean"),
+            mktemp = mktemp.to_str().expect("mktemp path is not utf8 clean"),
+            nix_store = nix_store.to_str().expect("nix_store path is not utf8 clean"),
+            rm = rm.to_str().expect("basename path is not utf8 clean"),
             sort = sort.to_str().expect("sort path is not utf8 clean"),
             zstd = zstd.to_str().expect("zstd path is not utf8 clean"),
         ),
