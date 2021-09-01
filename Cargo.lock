@@ -102,6 +102,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cpio"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f00177cda1bb5c5b0a05b1b506125c776411cdfc6a41085126881266e0cdc242"
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -556,8 +562,10 @@ dependencies = [
 name = "nix-netboot-serve"
 version = "0.1.0"
 dependencies = [
+ "cpio",
  "futures",
  "http",
+ "lazy_static",
  "log",
  "pretty_env_logger",
  "structopt",

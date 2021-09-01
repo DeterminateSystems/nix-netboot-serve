@@ -1,6 +1,8 @@
 use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
 use futures::StreamExt;
 use http::response::Builder;
+use lazy_static::lazy_static;
+use std::convert::TryInto;
 use std::ffi::OsString;
 use std::io;
 use std::net::SocketAddr;
@@ -21,8 +23,8 @@ use warp::Rejection;
 #[macro_use]
 extern crate log;
 
-mod cpio;
-use crate::cpio::CpioCache;
+mod cpio_cache;
+use crate::cpio_cache::CpioCache;
 
 mod options;
 use crate::options::Opt;
@@ -48,6 +50,57 @@ fn server_error() -> Rejection {
 fn feature_disabled(msg: &str) -> Rejection {
     warn!("Feature disabled: {}", msg);
     reject::not_found()
+}
+
+fn make_leader_cpio() -> std::io::Result<Vec<u8>> {
+    let mut leader_cpio = std::io::Cursor::new(vec![]);
+    cpio::write_cpio(
+        vec![
+            // mode for a directory: 0o40000 + 0o00xxx for its permission bits
+            // nlink for directories == the number of things in it plus 2 (., ..)
+            (
+                cpio::newc::Builder::new(".").mode(0o40755).nlink(3),
+                std::io::empty(),
+            ),
+            (
+                cpio::newc::Builder::new("nix").mode(0o40755).nlink(3),
+                std::io::empty(),
+            ),
+            (
+                cpio::newc::Builder::new("nix/store")
+                    .mode(0o40775)
+                    .nlink(2)
+                    .uid(0)
+                    .gid(30000),
+                std::io::empty(),
+            ),
+            (
+                cpio::newc::Builder::new("nix/.nix-netboot-serve-db")
+                    .mode(0o40755)
+                    .nlink(3),
+                std::io::empty(),
+            ),
+            (
+                cpio::newc::Builder::new("nix/.nix-netboot-serve-db/registration")
+                    .mode(0o40755)
+                    .nlink(2),
+                std::io::empty(),
+            ),
+        ]
+        .into_iter(),
+        &mut leader_cpio,
+    )?;
+
+    Ok(leader_cpio.into_inner())
+}
+
+lazy_static! {
+    static ref LEADER_CPIO_BYTES: Vec<u8> =
+        make_leader_cpio().expect("Failed to generate the leader CPIO.");
+    static ref LEADER_CPIO_LEN: u64 = LEADER_CPIO_BYTES
+        .len()
+        .try_into()
+        .expect("Failed to convert usize leader length to u64");
 }
 
 #[tokio::main]
@@ -254,12 +307,11 @@ async fn serve_initrd(
         });
     }
 
-    let bytes = include_bytes!("./nix-store.cpio");
-    size += bytes.len() as u64; // !!! is this safe?
+    let size = size
+        .checked_add(*LEADER_CPIO_LEN)
+        .expect("Failed to sum the leader length with the total initrd size");
     let leader_stream = futures::stream::once(async {
-        Ok::<_, std::io::Error>(warp::hyper::body::Bytes::from_static(include_bytes!(
-            "./nix-store.cpio"
-        )))
+        Ok::<_, std::io::Error>(warp::hyper::body::Bytes::from_static(&LEADER_CPIO_BYTES))
     });
 
     let body_stream = leader_stream.chain(streams.try_flatten());

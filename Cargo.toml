@@ -17,3 +17,5 @@ tokio-stream = { version = "0.1.7", features = [ "io-util" ] }
 tokio-util = "0.6.7"
 warp = "0.3"
 tempfile = "3.2.0"
+cpio = "0.2.0"
+lazy_static = "1.4.0"
