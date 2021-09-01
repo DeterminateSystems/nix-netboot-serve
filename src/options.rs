@@ -23,4 +23,8 @@ pub struct Opt {
     /// IP:port to listen on
     #[structopt(long)]
     pub listen: String,
+
+    /// Number of open files to set the ulimit to
+    #[structopt(long, default_value = "50000")]
+    pub open_files: u64,
 }

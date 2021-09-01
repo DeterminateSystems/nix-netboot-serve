@@ -53,6 +53,37 @@ fn feature_disabled(msg: &str) -> Rejection {
     reject::not_found()
 }
 
+fn set_nofiles(limit: u64) -> io::Result<()> {
+    let (soft, hard) = rlimit::Resource::NOFILE.get()?;
+
+    if soft > limit {
+        info!("Not increasing NOFILES ulimit: current soft ({}) is already higher than the specified ({})", soft, limit);
+        return Ok(());
+    }
+
+    let mut setto = limit;
+
+    if limit > hard {
+        info!(
+            "Requested NOFILES ({}) larger than the hard limit ({}), capping at {}.",
+            limit, hard, hard
+        );
+        setto = hard;
+    }
+
+    if setto == soft {
+        info!(
+            "Requested NOFILES ({}) is the same as the current soft limit.",
+            setto
+        );
+        return Ok(());
+    }
+
+    rlimit::Resource::NOFILE.set(limit, hard)?;
+
+    Ok(())
+}
+
 fn make_leader_cpio() -> std::io::Result<Vec<u8>> {
     let mut leader_cpio = std::io::Cursor::new(vec![]);
     cpio::write_cpio(
@@ -147,6 +178,8 @@ async fn main() {
     pretty_env_logger::init();
 
     let opt = Opt::from_args();
+
+    set_nofiles(opt.open_files).expect("Failed to set ulimit for the number of open files");
 
     let check_dir_exists = |path: PathBuf| {
         if !path.is_dir() {

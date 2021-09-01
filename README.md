@@ -5,13 +5,7 @@ profiles, or configurations with 30s iteration times.
 
 ## Usage
 
-Make sure you run it with a very high number of open files:
-
-```
-ulimit -Sn 50000
-```
-
-Then create working directories for it:
+Create working directories for it:
 
 ```
 mkdir ./gc-roots ./profiles ./configurations ./cpio-cache
