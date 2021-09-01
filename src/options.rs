@@ -19,4 +19,8 @@ pub struct Opt {
     /// Path to directory to put cached cpio files
     #[structopt(long, parse(from_os_str))]
     pub cpio_cache_dir: PathBuf,
+
+    /// IP:port to listen on
+    #[structopt(long)]
+    pub listen: String,
 }

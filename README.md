@@ -20,7 +20,7 @@ mkdir ./gc-roots ./profiles ./configurations ./cpio-cache
 Then start up the server:
 
 ```
-RUST_LOG=info cargo run -- --gc-root-dir ./gc-roots --config-dir ./configurations --profile-dir ./profiles/ --cpio-cache-dir ./cpio-cache/
+RUST_LOG=info cargo run -- --gc-root-dir ./gc-roots --config-dir ./configurations --profile-dir ./profiles/ --cpio-cache-dir ./cpio-cache/ --listen 127.0.0.1:3030
 ```
 
 See `./boot.sh` for an example of booting with QEMU.

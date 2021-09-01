@@ -3,6 +3,7 @@ use futures::StreamExt;
 use http::response::Builder;
 use std::ffi::OsString;
 use std::io;
+use std::net::SocketAddr;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
@@ -68,7 +69,8 @@ async fn main() {
         profile_dir: opt.profile_dir.map(check_dir_exists),
         configuration_dir: opt.config_dir.map(check_dir_exists),
         gc_root: check_dir_exists(opt.gc_root_dir),
-        cpio_cache: CpioCache::new(check_dir_exists(opt.cpio_cache_dir)).expect("Cannot construct a CPIO Cache"),
+        cpio_cache: CpioCache::new(check_dir_exists(opt.cpio_cache_dir))
+            .expect("Cannot construct a CPIO Cache"),
     };
 
     // ulimit -Sn 500000
@@ -94,7 +96,13 @@ async fn main() {
             .or(kernel),
     );
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes)
+        .run(
+            opt.listen
+                .parse::<SocketAddr>()
+                .expect("Failed to parse the listen argument"),
+        )
+        .await;
 }
 
 async fn serve_configuration(
