@@ -1,7 +1,7 @@
 # nix-netboot-serve
 
 Dynamically generate netboot images for arbitrary NixOS system closures,
-profiles, or configurations with 30s iteration times.
+profiles, or configurations with 10s iteration times.
 
 ## Usage
 

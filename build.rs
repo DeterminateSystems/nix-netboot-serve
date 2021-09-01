@@ -86,7 +86,7 @@ trap finish EXIT
             | {sort} -z \
             | {cpio} -o -H newc -R +0:+1 --reproducible --null
     }}
-}} | {zstd} --compress --stdout -19 > "$2"
+}} | {zstd} --compress --stdout -10 > "$2"
 "#);
     cmd.arg("--");
     cmd.arg(src_path);
