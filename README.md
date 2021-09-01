@@ -77,6 +77,9 @@ ready to be built:
             fsType = "ext4";
         };
         boot.loader.grub.devices = [ "/dev/bogus" ];
+        boot.postBootCommands = ''
+            PATH=${pkgs.nix}/bin /nix/.nix-netboot-serve-db/register
+        '';
     };
 }).system
 ```
