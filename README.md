@@ -168,3 +168,20 @@ NixOS's NetBoot image creation support works well, however iterating
 on a single closure involves recreating the CPIO and recompressing for
 every store path every time. This can add several minutes to cycle
 time.
+
+## Caveats
+
+### Loading the Nix Database
+
+Before using Nix inside the booted machine, make sure to **load the Nix
+database**. To do that, add this to your NixOS configuration:
+
+```
+{ pkgs, ... }: {
+    boot.postBootCommands = ''
+        PATH=${pkgs.nix}/bin /nix/.nix-netboot-serve-db/register
+    '';
+}
+```
+
+This is not necessary if the system will not execute Nix commands.

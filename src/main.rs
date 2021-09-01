@@ -3,6 +3,7 @@ use futures::StreamExt;
 use http::response::Builder;
 use lazy_static::lazy_static;
 use std::convert::TryInto;
+use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io;
 use std::net::SocketAddr;
@@ -92,6 +93,44 @@ fn make_leader_cpio() -> std::io::Result<Vec<u8>> {
     )?;
 
     Ok(leader_cpio.into_inner())
+}
+
+fn make_load_cpio(paths: &Vec<PathBuf>) -> Result<Vec<u8>, LoadCpioError> {
+    let script = paths
+        .iter()
+        .map(|p| {
+            let mut line =
+                OsString::from("nix-store --load-db < /nix/.nix-netboot-serve-db/registration/");
+            line.push(basename(p).ok_or_else(|| LoadCpioError::NoBasename(p.to_path_buf()))?);
+            Ok(line)
+        })
+        .collect::<Result<Vec<OsString>, LoadCpioError>>()?
+        .into_iter()
+        .fold(OsString::from("#!/bin/sh"), |mut acc, line| {
+            acc.push("\n");
+            acc.push(line);
+            acc
+        });
+    let mut loader = std::io::Cursor::new(vec![]);
+    cpio::write_cpio(
+        vec![(
+            cpio::newc::Builder::new("nix/.nix-netboot-serve-db/register")
+                .mode(0o0100500)
+                .nlink(1),
+            std::io::Cursor::new(script.as_bytes()),
+        )]
+        .into_iter(),
+        &mut loader,
+    )
+    .map_err(LoadCpioError::Io)?;
+
+    Ok(loader.into_inner())
+}
+
+#[derive(Debug)]
+enum LoadCpioError {
+    Io(std::io::Error),
+    NoBasename(PathBuf),
 }
 
 lazy_static! {
@@ -274,6 +313,7 @@ async fn serve_initrd(
     })?;
 
     let mut cpio_makers = closure_paths
+        .to_owned()
         .into_iter()
         .map(|path| async { context.cpio_cache.dump_cpio(path).await })
         .collect::<FuturesUnordered<_>>();
@@ -314,7 +354,24 @@ async fn serve_initrd(
         Ok::<_, std::io::Error>(warp::hyper::body::Bytes::from_static(&LEADER_CPIO_BYTES))
     });
 
-    let body_stream = leader_stream.chain(streams.try_flatten());
+    let store_loader = make_load_cpio(&closure_paths).map_err(|e| {
+        error!("Failed to generate a load CPIO: {:?}", e);
+        server_error()
+    })?;
+    let size = size
+        .checked_add(
+            store_loader
+                .len()
+                .try_into()
+                .expect("Failed to convert a usize to u64"),
+        )
+        .expect("Failed to sum the loader length with the total initrd size");
+
+    let body_stream = leader_stream
+        .chain(futures::stream::once(async move {
+            Ok::<_, std::io::Error>(warp::hyper::body::Bytes::from(store_loader))
+        }))
+        .chain(streams.try_flatten());
 
     Ok(Builder::new()
         .header("Content-Length", size)
@@ -395,5 +452,13 @@ fn redirect_symlink_to_boot(symlink: &Path) -> Result<OsString, Rejection> {
         );
 
         return Err(reject::not_found());
+    }
+}
+
+fn basename(path: &Path) -> Option<&OsStr> {
+    if let Some(std::path::Component::Normal(pathname)) = path.components().last() {
+        Some(pathname)
+    } else {
+        None
     }
 }
