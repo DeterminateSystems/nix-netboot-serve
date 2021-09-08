@@ -433,6 +433,13 @@ async fn open_file_stream(path: &Path) -> std::io::Result<impl Stream<Item = io:
 }
 
 async fn get_closure_paths(path: &Path) -> io::Result<Vec<PathBuf>> {
+    let kernel = path
+        .to_owned()
+        .join("kernel")
+        .canonicalize()?;
+    let kernel_path = kernel
+        .parent()
+        .ok_or(io::Error::new(io::ErrorKind::Other, "kernel in /"))?;
     let output = Command::new("nix-store")
         .arg("--query")
         .arg("--requisites")
@@ -452,6 +459,7 @@ async fn get_closure_paths(path: &Path) -> io::Result<Vec<PathBuf>> {
                 Some(PathBuf::from(line))
             }
         })
+        .filter(|line| line != kernel_path)
         .collect();
 
     Ok(lines)
