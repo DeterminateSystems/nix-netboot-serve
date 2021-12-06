@@ -323,7 +323,7 @@ async fn serve_hydra(
         .await
         .map_err(|e| {
             warn!(
-                "Getting the latest job from {} {} {} {} failed: {:?}",
+                "Getting the latest job from {} {}:{}:{} failed: {:?}",
                 server, project, jobset, job_name, e
             );
             server_error()
@@ -346,7 +346,7 @@ async fn serve_hydra(
     .await
     .map_err(|e| {
         warn!(
-            "Getting the latest job from {} {} {} {} failed: {:?}",
+            "Getting the latest job from {} {}:{}:{} failed: {:?}",
             server, project, jobset, job_name, e
         );
         server_error()
