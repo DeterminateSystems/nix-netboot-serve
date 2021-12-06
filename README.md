@@ -86,6 +86,20 @@ ready to be built:
 
 Then use `/dispatch/configuration/m1.small` to boot it.
 
+## Booting from Hydra
+
+### How To
+
+Create a Hydra project and jobset which contains a job which produces a
+bootable system configuration.
+
+Then use the URL `/dispatch/hydra/HOSTNAME/PROJECT/JOBSET/JOB`, substituting
+those URL sections with names from your system to boot it.
+
+Note that nix-netboot-serve will query the provided Hydra for the store path
+to boot and will then try to substitute the closure. Nix must already be
+configured with the requested hydra's cache for this to work.
+
 ### Behavior
 
 The configuration will be `nix-build` once per boot, and create a symlink
@@ -104,27 +118,6 @@ Note: there is currently a buggy race condition. In the following circumstance:
 1. machine B boots the short build configuration
 1. machine A's configuration finishes building
 1. machine A boots the **short configuration** instead of the long configuration
-
-## Notes on NixOS Configuration
-
-Booting a machine from this server will completely ignore any of the
-defined `fileSystems`, everything will run out of RAM.
-
-This system assumes a _normal_ NixOS system booting off a regular disk:
-trying to use this to netboot a USB installer _will not work_.
-
-If you don't have an existing configuration to start with, you could
-start with this:
-
-```nix
-{
-    fileSystems."/" = {
-        device = "/dev/bogus";
-        fsType = "ext4";
-    };
-    boot.loader.grub.devices = [ "/dev/bogus" ];
-}
-```
 
 ## Theory of Operation
 

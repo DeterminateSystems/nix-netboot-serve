@@ -8,5 +8,7 @@ pkgs.mkShell {
         pkgs.file
         pkgs.entr
         pkgs.binwalk
+        pkgs.openssl
+        pkgs.pkgconfig
     ];
 }

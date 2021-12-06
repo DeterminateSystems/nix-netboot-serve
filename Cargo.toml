@@ -7,16 +7,18 @@ license = "mit"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+cpio = "0.2.0"
 futures = "0.3.16"
 http = "0.2.4"
+lazy_static = "1.4.0"
 log = "0.4.14"
 pretty_env_logger = "0.4.0"
+reqwest = { version = "0.11.4", features = [ "json" ] }
+rlimit = "0.6.2"
+serde = { version = "1.0.130", features = ["derive"] }
 structopt = { version = "0.3" }
+tempfile = "3.2.0"
 tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1.7", features = [ "io-util" ] }
 tokio-util = "0.6.7"
 warp = "0.3"
-tempfile = "3.2.0"
-cpio = "0.2.0"
-lazy_static = "1.4.0"
-rlimit = "0.6.2"
