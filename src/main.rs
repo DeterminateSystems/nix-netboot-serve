@@ -494,7 +494,8 @@ async fn open_file_stream(path: &Path) -> std::io::Result<impl Stream<Item = io:
 }
 
 async fn realize_path(name: String, path: &str, context: &WebserverContext) -> io::Result<bool> {
-    // changes between two boots. I'm definitely going to regret this.
+    // FIXME: Two interleaving requests could make this gc root go away, letting the closure be
+    // GC'd during the serve.
     let symlink = context.gc_root.join(&name);
 
     let realize = Command::new("nix-store")
