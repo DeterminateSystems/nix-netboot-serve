@@ -159,6 +159,10 @@ on a single closure involves recreating the CPIO and recompressing for
 every store path every time. This can add several minutes to cycle
 time.
 
+## Other APIs
+
+* Get the size of the initrd: `HEAD /boot/PATH/initrd`
+
 ## Caveats
 
 ### Loading the Nix Database

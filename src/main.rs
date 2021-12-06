@@ -219,14 +219,16 @@ async fn main() {
         .and_then(serve_initrd);
     let kernel = warp::path!("boot" / String / "bzImage").and_then(serve_kernel);
 
-    let routes = warp::get().and(
-        root.or(profile)
-            .or(configuration)
-            .or(hydra)
-            .or(ipxe)
-            .or(initrd)
-            .or(kernel),
-    );
+    let routes = warp::get()
+        .and(
+            root.or(profile)
+                .or(configuration)
+                .or(hydra)
+                .or(ipxe)
+                .or(initrd.clone())
+                .or(kernel),
+        )
+        .or(warp::head().and(initrd));
 
     warp::serve(routes)
         .run(
