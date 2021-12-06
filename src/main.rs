@@ -316,15 +316,15 @@ async fn serve_hydra(
     server: String,
     project: String,
     jobset: String,
-    job: String,
+    job_name: String,
     context: WebserverContext,
 ) -> Result<impl warp::Reply, Rejection> {
-    let job = hydra::get_latest_job(&server, &project, &jobset, &job)
+    let job = hydra::get_latest_job(&server, &project, &jobset, &job_name)
         .await
         .map_err(|e| {
             warn!(
                 "Getting the latest job from {} {} {} {} failed: {:?}",
-                server, project, jobset, job, e
+                server, project, jobset, job_name, e
             );
             server_error()
         })?;
@@ -333,18 +333,37 @@ async fn serve_hydra(
         .buildoutputs
         .get("out")
         .ok_or_else(|| {
-            warn!("No out for job {:?}", &job);
+            warn!("No out for job {:?}", &job_name);
             reject::not_found()
         })?
         .path;
 
-    Ok(Builder::new()
-        .status(302)
-        .header(
-            "Location",
-            redirect_to_boot_store_path(Path::new(&output))?.as_bytes(),
-        )
-        .body(String::new()))
+    let realize = realize_path(
+        format!("{}-{}-{}-{}", &server, &project, &jobset, &job_name),
+        &output,
+        &context,
+    )
+    .await
+    .map_err(|e| {
+        warn!(
+            "Getting the latest job from {} {} {} {} failed: {:?}",
+            server, project, jobset, job_name, e
+        );
+        server_error()
+    })?;
+
+    if realize {
+        Ok(Builder::new()
+            .status(302)
+            .header(
+                "Location",
+                redirect_to_boot_store_path(Path::new(&output))?.as_bytes(),
+            )
+            .body(String::new()))
+    } else {
+        warn!("No out for job {:?}", &job_name);
+        Err(reject::not_found())
+    }
 }
 
 async fn serve_ipxe(name: String) -> Result<impl warp::Reply, Rejection> {
@@ -472,6 +491,21 @@ async fn open_file_stream(path: &Path) -> std::io::Result<impl Stream<Item = io:
     let file = File::open(path).await?;
 
     Ok(ReaderStream::new(BufReader::new(file)))
+}
+
+async fn realize_path(name: String, path: &str, context: &WebserverContext) -> io::Result<bool> {
+    // changes between two boots. I'm definitely going to regret this.
+    let symlink = context.gc_root.join(&name);
+
+    let realize = Command::new("nix-store")
+        .arg("--realise")
+        .arg(path)
+        .arg("--add-root")
+        .arg(&symlink)
+        .status()
+        .await?;
+
+    return Ok(realize.success());
 }
 
 async fn get_closure_paths(path: &Path) -> io::Result<Vec<PathBuf>> {
