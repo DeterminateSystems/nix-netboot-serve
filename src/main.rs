@@ -262,7 +262,7 @@ async fn serve_configuration(
     // changes between two boots. I'm definitely going to regret this.
     let symlink = context.gc_root.join(&name);
 
-    let build = Command::new("nix-build")
+    let build = Command::new(env!("NIX_BUILD_BIN"))
         .arg(&config)
         .arg("--out-link")
         .arg(&symlink)
@@ -500,7 +500,7 @@ async fn realize_path(name: String, path: &str, context: &WebserverContext) -> i
     // GC'd during the serve.
     let symlink = context.gc_root.join(&name);
 
-    let realize = Command::new("nix-store")
+    let realize = Command::new(env!("NIX_STORE_BIN"))
         .arg("--realise")
         .arg(path)
         .arg("--add-root")
@@ -512,7 +512,7 @@ async fn realize_path(name: String, path: &str, context: &WebserverContext) -> i
 }
 
 async fn get_closure_paths(path: &Path) -> io::Result<Vec<PathBuf>> {
-    let output = Command::new("nix-store")
+    let output = Command::new(env!("NIX_STORE_BIN"))
         .arg("--query")
         .arg("--requisites")
         .arg(path)
