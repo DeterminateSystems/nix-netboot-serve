@@ -203,8 +203,6 @@ async fn main() {
             .expect("Cannot construct a CPIO Cache"),
     };
 
-    // ulimit -Sn 500000
-
     let root = warp::path::end().map(|| "nix-netboot-serve");
     let profile = warp::path!("dispatch" / "profile" / String)
         .and(with_context(webserver.clone()))
