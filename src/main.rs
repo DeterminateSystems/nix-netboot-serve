@@ -82,7 +82,9 @@ fn set_nofiles(limit: u64) -> io::Result<()> {
         return Ok(());
     }
 
-    rlimit::Resource::NOFILE.set(limit, hard)?;
+    info!("Setting open files to {} (hard: {})", setto, hard);
+
+    rlimit::Resource::NOFILE.set(setto, hard)?;
 
     Ok(())
 }
