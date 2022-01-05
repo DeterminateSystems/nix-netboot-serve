@@ -3,7 +3,6 @@ use futures::StreamExt;
 use http::response::Builder;
 use lazy_static::lazy_static;
 use std::convert::TryInto;
-use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::io;
 use std::net::SocketAddr;
@@ -28,7 +27,7 @@ mod options;
 use crate::options::Opt;
 
 mod files;
-use crate::files::open_file_stream;
+use crate::files::{basename, open_file_stream};
 
 mod hydra;
 
@@ -558,13 +557,5 @@ fn redirect_to_boot_store_path(path: &Path) -> Result<OsString, Rejection> {
         );
 
         return Err(reject::not_found());
-    }
-}
-
-fn basename(path: &Path) -> Option<&OsStr> {
-    if let Some(std::path::Component::Normal(pathname)) = path.components().last() {
-        Some(pathname)
-    } else {
-        None
     }
 }
