@@ -22,3 +22,8 @@ pub fn with_context(
 pub fn server_error() -> Rejection {
     reject::not_found()
 }
+
+pub fn feature_disabled(msg: &str) -> Rejection {
+    warn!("Feature disabled: {}", msg);
+    reject::not_found()
+}

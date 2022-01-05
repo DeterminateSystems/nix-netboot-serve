@@ -28,12 +28,7 @@ use crate::dispatch::redirect_symlink_to_boot;
 use crate::dispatch_hydra::serve_hydra;
 use crate::nofiles::set_nofiles;
 use crate::options::Opt;
-use crate::webservercontext::{server_error, with_context, WebserverContext};
-
-fn feature_disabled(msg: &str) -> Rejection {
-    warn!("Feature disabled: {}", msg);
-    reject::not_found()
-}
+use crate::webservercontext::{feature_disabled, server_error, with_context, WebserverContext};
 
 #[tokio::main]
 async fn main() {
