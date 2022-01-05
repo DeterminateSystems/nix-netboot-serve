@@ -15,6 +15,7 @@ pub async fn realize_path(name: String, path: &str, gc_root: &Path) -> io::Resul
         .arg(path)
         .arg("--add-root")
         .arg(&symlink)
+        .arg("--indirect")
         .status()
         .await?;
 
