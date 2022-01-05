@@ -1,12 +1,8 @@
-use http::response::Builder;
 use std::net::SocketAddr;
-use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
+
 use structopt::StructOpt;
-use tokio::process::Command;
-use warp::reject;
 use warp::Filter;
-use warp::Rejection;
 
 #[macro_use]
 extern crate log;
@@ -15,6 +11,7 @@ mod boot;
 mod cpio;
 mod cpio_cache;
 mod dispatch;
+mod dispatch_configuration;
 mod dispatch_hydra;
 mod dispatch_profile;
 mod files;
@@ -25,12 +22,12 @@ mod options;
 mod webservercontext;
 use crate::boot::{serve_initrd, serve_ipxe, serve_kernel};
 use crate::cpio_cache::CpioCache;
-use crate::dispatch::redirect_symlink_to_boot;
+use crate::dispatch_configuration::serve_configuration;
 use crate::dispatch_hydra::serve_hydra;
 use crate::dispatch_profile::serve_profile;
 use crate::nofiles::set_nofiles;
 use crate::options::Opt;
-use crate::webservercontext::{feature_disabled, server_error, with_context, WebserverContext};
+use crate::webservercontext::{with_context, WebserverContext};
 
 #[tokio::main]
 async fn main() {
@@ -91,63 +88,4 @@ async fn main() {
                 .expect("Failed to parse the listen argument"),
         )
         .await;
-}
-
-async fn serve_configuration(
-    name: String,
-    context: WebserverContext,
-) -> Result<impl warp::Reply, Rejection> {
-    let config = context
-        .configuration_dir
-        .as_ref()
-        .ok_or_else(|| feature_disabled("Configuration booting is not configured on this server."))?
-        .join(&name)
-        .join("default.nix");
-
-    if !config.is_file() {
-        println!(
-            "Configuration {} resolves to {:?} which is not a file",
-            name, config
-        );
-        return Err(reject::not_found());
-    }
-
-    // TODO: not thread safe sorta, but kinda is, unless the config
-    // changes between two boots. I'm definitely going to regret this.
-    let symlink = context.gc_root.join(&name);
-
-    let build = Command::new(env!("NIX_BUILD_BIN"))
-        .arg(&config)
-        .arg("--out-link")
-        .arg(&symlink)
-        .status()
-        .await
-        .map_err(|e| {
-            warn!(
-                "Executing nix-build on {:?} failed at some fundamental level: {:?}",
-                config, e
-            );
-            server_error()
-        })?;
-
-    if !build.success() {
-        return Ok(Builder::new().status(200).body(format!(
-            "#!ipxe
-
-echo Failed to render the configuration.
-echo Will retry in 5s, press enter to retry immediately.
-
-menu Failed to render the configuration. Will retry in 5s, or press enter to retry immediately.
-item gonow Retry now
-choose --default gonow --timeout 5000 shouldwedoit
-
-chain /dispatch/configuration/{}",
-            name
-        )));
-    }
-
-    Ok(Builder::new()
-        .status(302)
-        .header("Location", redirect_symlink_to_boot(&symlink)?.as_bytes())
-        .body(String::new()))
 }
