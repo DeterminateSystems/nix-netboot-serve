@@ -12,12 +12,8 @@ use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use tokio::fs;
-use tokio::fs::File;
-use tokio::io::BufReader;
 use tokio::process::Command;
-use tokio_stream::Stream;
-use tokio_util::io::ReaderStream;
-use warp::hyper::{body::Bytes, Body};
+use warp::hyper::Body;
 use warp::reject;
 use warp::Filter;
 use warp::Rejection;
@@ -30,6 +26,9 @@ use crate::cpio_cache::CpioCache;
 
 mod options;
 use crate::options::Opt;
+
+mod files;
+use crate::files::open_file_stream;
 
 mod hydra;
 
@@ -487,12 +486,6 @@ async fn serve_kernel(name: String) -> Result<impl warp::Reply, Rejection> {
     Ok(Builder::new()
         .status(200)
         .body(Body::wrap_stream(read_stream)))
-}
-
-async fn open_file_stream(path: &Path) -> std::io::Result<impl Stream<Item = io::Result<Bytes>>> {
-    let file = File::open(path).await?;
-
-    Ok(ReaderStream::new(BufReader::new(file)))
 }
 
 async fn realize_path(name: String, path: &str, context: &WebserverContext) -> io::Result<bool> {
