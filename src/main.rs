@@ -1,7 +1,7 @@
 use http::response::Builder;
 use std::net::SocketAddr;
 use std::os::unix::ffi::OsStrExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use structopt::StructOpt;
 use tokio::process::Command;
 use warp::reject;
@@ -15,6 +15,7 @@ mod boot;
 mod cpio;
 mod cpio_cache;
 mod dispatch;
+mod dispatch_hydra;
 mod files;
 mod hydra;
 mod nix;
@@ -23,8 +24,8 @@ mod options;
 mod webservercontext;
 use crate::boot::{serve_initrd, serve_ipxe, serve_kernel};
 use crate::cpio_cache::CpioCache;
-use crate::dispatch::{redirect_symlink_to_boot, redirect_to_boot_store_path};
-use crate::nix::realize_path;
+use crate::dispatch::redirect_symlink_to_boot;
+use crate::dispatch_hydra::serve_hydra;
 use crate::nofiles::set_nofiles;
 use crate::options::Opt;
 use crate::webservercontext::{server_error, with_context, WebserverContext};
@@ -168,58 +169,4 @@ async fn serve_profile(
         .status(302)
         .header("Location", redirect_symlink_to_boot(&symlink)?.as_bytes())
         .body(String::new()))
-}
-
-async fn serve_hydra(
-    server: String,
-    project: String,
-    jobset: String,
-    job_name: String,
-    context: WebserverContext,
-) -> Result<impl warp::Reply, Rejection> {
-    let job = hydra::get_latest_job(&server, &project, &jobset, &job_name)
-        .await
-        .map_err(|e| {
-            warn!(
-                "Getting the latest job from {} {}:{}:{} failed: {:?}",
-                server, project, jobset, job_name, e
-            );
-            server_error()
-        })?;
-
-    let output = &job
-        .buildoutputs
-        .get("out")
-        .ok_or_else(|| {
-            warn!("No out for job {:?}", &job_name);
-            reject::not_found()
-        })?
-        .path;
-
-    let realize = realize_path(
-        format!("{}-{}-{}-{}", &server, &project, &jobset, &job_name),
-        &output,
-        &context.gc_root,
-    )
-    .await
-    .map_err(|e| {
-        warn!(
-            "Getting the latest job from {} {}:{}:{} failed: {:?}",
-            server, project, jobset, job_name, e
-        );
-        server_error()
-    })?;
-
-    if realize {
-        Ok(Builder::new()
-            .status(302)
-            .header(
-                "Location",
-                redirect_to_boot_store_path(Path::new(&output))?.as_bytes(),
-            )
-            .body(String::new()))
-    } else {
-        warn!("No out for job {:?}", &job_name);
-        Err(reject::not_found())
-    }
 }
