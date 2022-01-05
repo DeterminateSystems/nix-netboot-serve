@@ -37,19 +37,8 @@ use crate::nofiles::set_nofiles;
 mod nix;
 use crate::nix::{get_closure_paths, realize_path};
 
-#[derive(Clone)]
-struct WebserverContext {
-    profile_dir: Option<PathBuf>,
-    configuration_dir: Option<PathBuf>,
-    gc_root: PathBuf,
-    cpio_cache: CpioCache,
-}
-
-fn with_context(
-    context: WebserverContext,
-) -> impl Filter<Extract = (WebserverContext,), Error = std::convert::Infallible> + Clone {
-    warp::any().map(move || context.clone())
-}
+mod webservercontext;
+use crate::webservercontext::{with_context, WebserverContext};
 
 fn server_error() -> Rejection {
     reject::not_found()
