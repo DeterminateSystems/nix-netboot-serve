@@ -19,8 +19,8 @@
       });
     in
     {
-      devShell = forAllSystems ({ system, pkgs, ... }: self.packages.${system}.package.overrideAttrs ({ buildInputs ? [ ], ... }: {
-        buildInputs = buildInputs ++ (with pkgs; [
+      devShell = forAllSystems ({ system, pkgs, ... }: self.packages.${system}.package.overrideAttrs ({ nativeBuildInputs ? [ ], ... }: {
+        nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [
           binwalk
           codespell
           entr

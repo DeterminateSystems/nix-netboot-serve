@@ -110,8 +110,18 @@ trap finish EXIT
     )
     .unwrap();
 
-    println!("cargo:rustc-env=NIX_STORE_BIN={}", nix_store.to_str().expect("nix_store path is not utf8 clean"));
-    println!("cargo:rustc-env=NIX_BUILD_BIN={}", nix_build.to_str().expect("nix_build path is not utf8 clean"));
+    println!(
+        "cargo:rustc-env=NIX_STORE_BIN={}",
+        nix_store
+            .to_str()
+            .expect("nix_store path is not utf8 clean")
+    );
+    println!(
+        "cargo:rustc-env=NIX_BUILD_BIN={}",
+        nix_build
+            .to_str()
+            .expect("nix_build path is not utf8 clean")
+    );
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=PATH");
 
