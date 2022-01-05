@@ -3,10 +3,8 @@ use futures::StreamExt;
 use http::response::Builder;
 use std::convert::TryInto;
 use std::ffi::OsString;
-use std::io;
 use std::net::SocketAddr;
 use std::os::unix::ffi::OsStrExt;
-use std::os::unix::ffi::OsStringExt;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use tokio::fs;
@@ -35,6 +33,9 @@ mod hydra;
 
 mod nofiles;
 use crate::nofiles::set_nofiles;
+
+mod nix;
+use crate::nix::{get_closure_paths, realize_path};
 
 #[derive(Clone)]
 struct WebserverContext {
@@ -224,7 +225,7 @@ async fn serve_hydra(
     let realize = realize_path(
         format!("{}-{}-{}-{}", &server, &project, &jobset, &job_name),
         &output,
-        &context,
+        &context.gc_root,
     )
     .await
     .map_err(|e| {
@@ -368,47 +369,6 @@ async fn serve_kernel(name: String) -> Result<impl warp::Reply, Rejection> {
     Ok(Builder::new()
         .status(200)
         .body(Body::wrap_stream(read_stream)))
-}
-
-async fn realize_path(name: String, path: &str, context: &WebserverContext) -> io::Result<bool> {
-    // FIXME: Two interleaving requests could make this gc root go away, letting the closure be
-    // GC'd during the serve.
-    let symlink = context.gc_root.join(&name);
-
-    let realize = Command::new(env!("NIX_STORE_BIN"))
-        .arg("--realise")
-        .arg(path)
-        .arg("--add-root")
-        .arg(&symlink)
-        .status()
-        .await?;
-
-    return Ok(realize.success());
-}
-
-async fn get_closure_paths(path: &Path) -> io::Result<Vec<PathBuf>> {
-    let output = Command::new(env!("NIX_STORE_BIN"))
-        .arg("--query")
-        .arg("--requisites")
-        .arg(path)
-        .output()
-        .await?;
-
-    let lines = output
-        .stdout
-        .split(|&ch| ch == b'\n')
-        .filter_map(|line| {
-            if line.is_empty() {
-                None
-            } else {
-                let line = Vec::from(line);
-                let line = OsString::from_vec(line);
-                Some(PathBuf::from(line))
-            }
-        })
-        .collect();
-
-    Ok(lines)
 }
 
 fn redirect_symlink_to_boot(symlink: &Path) -> Result<OsString, Rejection> {
