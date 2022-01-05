@@ -31,7 +31,7 @@ pub async fn serve_hydra(
         .buildoutputs
         .get("out")
         .ok_or_else(|| {
-            warn!("No out for job {:?}", &job_name);
+            warn!("No out for job {:?}. Got: {:?}", &job_name, job);
             reject::not_found()
         })?
         .path;
@@ -59,7 +59,7 @@ pub async fn serve_hydra(
             )
             .body(String::new()))
     } else {
-        warn!("No out for job {:?}", &job_name);
+        warn!("Failed to realize output {} for {:?}", &output, &job_name);
         Err(reject::not_found())
     }
 }
