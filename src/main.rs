@@ -38,11 +38,7 @@ mod nix;
 use crate::nix::{get_closure_paths, realize_path};
 
 mod webservercontext;
-use crate::webservercontext::{with_context, WebserverContext};
-
-fn server_error() -> Rejection {
-    reject::not_found()
-}
+use crate::webservercontext::{server_error, with_context, WebserverContext};
 
 fn feature_disabled(msg: &str) -> Rejection {
     warn!("Feature disabled: {}", msg);
