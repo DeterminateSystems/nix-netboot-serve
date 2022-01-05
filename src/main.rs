@@ -31,6 +31,9 @@ use crate::files::{basename, open_file_stream};
 
 mod hydra;
 
+mod nofiles;
+use crate::nofiles::set_nofiles;
+
 #[derive(Clone)]
 struct WebserverContext {
     profile_dir: Option<PathBuf>,
@@ -52,39 +55,6 @@ fn server_error() -> Rejection {
 fn feature_disabled(msg: &str) -> Rejection {
     warn!("Feature disabled: {}", msg);
     reject::not_found()
-}
-
-fn set_nofiles(limit: u64) -> io::Result<()> {
-    let (soft, hard) = rlimit::Resource::NOFILE.get()?;
-
-    if soft > limit {
-        info!("Not increasing NOFILES ulimit: current soft ({}) is already higher than the specified ({})", soft, limit);
-        return Ok(());
-    }
-
-    let mut setto = limit;
-
-    if limit > hard {
-        info!(
-            "Requested NOFILES ({}) larger than the hard limit ({}), capping at {}.",
-            limit, hard, hard
-        );
-        setto = hard;
-    }
-
-    if setto == soft {
-        info!(
-            "Requested NOFILES ({}) is the same as the current soft limit.",
-            setto
-        );
-        return Ok(());
-    }
-
-    info!("Setting open files to {} (hard: {})", setto, hard);
-
-    rlimit::Resource::NOFILE.set(setto, hard)?;
-
-    Ok(())
 }
 
 fn make_leader_cpio() -> std::io::Result<Vec<u8>> {
