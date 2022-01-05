@@ -16,6 +16,7 @@ mod cpio;
 mod cpio_cache;
 mod dispatch;
 mod dispatch_hydra;
+mod dispatch_profile;
 mod files;
 mod hydra;
 mod nix;
@@ -26,6 +27,7 @@ use crate::boot::{serve_initrd, serve_ipxe, serve_kernel};
 use crate::cpio_cache::CpioCache;
 use crate::dispatch::redirect_symlink_to_boot;
 use crate::dispatch_hydra::serve_hydra;
+use crate::dispatch_profile::serve_profile;
 use crate::nofiles::set_nofiles;
 use crate::options::Opt;
 use crate::webservercontext::{feature_disabled, server_error, with_context, WebserverContext};
@@ -143,22 +145,6 @@ chain /dispatch/configuration/{}",
             name
         )));
     }
-
-    Ok(Builder::new()
-        .status(302)
-        .header("Location", redirect_symlink_to_boot(&symlink)?.as_bytes())
-        .body(String::new()))
-}
-
-async fn serve_profile(
-    name: String,
-    context: WebserverContext,
-) -> Result<impl warp::Reply, Rejection> {
-    let symlink = context
-        .profile_dir
-        .as_ref()
-        .ok_or_else(|| feature_disabled("Profile booting is not configured on this server."))?
-        .join(&name);
 
     Ok(Builder::new()
         .status(302)
