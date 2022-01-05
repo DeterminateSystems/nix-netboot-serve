@@ -1,5 +1,4 @@
 use http::response::Builder;
-use std::ffi::OsString;
 use std::net::SocketAddr;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
@@ -15,6 +14,7 @@ extern crate log;
 mod boot;
 mod cpio;
 mod cpio_cache;
+mod dispatch;
 mod files;
 mod hydra;
 mod nix;
@@ -23,6 +23,7 @@ mod options;
 mod webservercontext;
 use crate::boot::{serve_initrd, serve_ipxe, serve_kernel};
 use crate::cpio_cache::CpioCache;
+use crate::dispatch::{redirect_symlink_to_boot, redirect_to_boot_store_path};
 use crate::nix::realize_path;
 use crate::nofiles::set_nofiles;
 use crate::options::Opt;
@@ -220,37 +221,5 @@ async fn serve_hydra(
     } else {
         warn!("No out for job {:?}", &job_name);
         Err(reject::not_found())
-    }
-}
-
-fn redirect_symlink_to_boot(symlink: &Path) -> Result<OsString, Rejection> {
-    let path = symlink.read_link().map_err(|e| {
-        warn!("Reading the link {:?} failed with: {:?}", symlink, e);
-        reject::not_found()
-    })?;
-
-    trace!("Resolved symlink {:?} to {:?}", symlink, path);
-    redirect_to_boot_store_path(&path)
-}
-
-fn redirect_to_boot_store_path(path: &Path) -> Result<OsString, Rejection> {
-    if !path.exists() {
-        warn!("Path does not exist: {:?}", &path);
-        return Err(reject::not_found());
-    }
-
-    if let Some(std::path::Component::Normal(pathname)) = path.components().last() {
-        let mut location = OsString::from("/boot/");
-        location.push(pathname);
-        location.push("/netboot.ipxe");
-
-        return Ok(location);
-    } else {
-        error!(
-            "Store path {:?} resolves to {:?} which has no path components?",
-            &path, &path
-        );
-
-        return Err(reject::not_found());
     }
 }
