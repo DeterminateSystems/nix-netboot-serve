@@ -24,7 +24,7 @@ pub async fn serve_ipxe(name: String) -> Result<impl warp::Reply, Rejection> {
 echo Booting NixOS closure {name}. Note: initrd may stay pre-0% for a minute or two.
 
 
-kernel bzImage rdinit={init} console=ttyS0 {params}
+kernel bzImage rdinit={init} {params}
 initrd initrd
 boot
 ",
