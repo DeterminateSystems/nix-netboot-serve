@@ -70,6 +70,8 @@ async fn main() {
         .and_then(serve_initrd);
     let kernel = warp::path!("boot" / String / "bzImage").and_then(serve_kernel);
 
+    let log = warp::log("nix-netboot-serve::web");
+
     let routes = warp::get()
         .and(
             root.or(profile)
@@ -79,7 +81,8 @@ async fn main() {
                 .or(initrd.clone())
                 .or(kernel),
         )
-        .or(warp::head().and(initrd));
+        .or(warp::head().and(initrd))
+        .with(log);
 
     warp::serve(routes)
         .run(
