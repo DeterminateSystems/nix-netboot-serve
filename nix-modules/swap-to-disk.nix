@@ -42,7 +42,10 @@
       ${pkgs.util-linux}/bin/mkswap /dev/mapper/spill.encrypted
       ${pkgs.util-linux}/bin/swapon /dev/mapper/spill.encrypted
 
-      ${pkgs.util-linux}/bin/mount -o remount,size=$(${pkgs.util-linux}/bin/lsblk --noheadings --bytes --output SIZE /dev/mapper/spill.encrypted) /
+      size=$(${pkgs.util-linux}/bin/lsblk --noheadings --bytes --output SIZE /dev/mapper/spill.encrypted)
+      pagesize=$(${pkgs.glibc}/bin/getconf PAGESIZE)
+      inodes=$((size / pagesize))
+      ${pkgs.util-linux}/bin/mount -o remount,size=$size,nr_inodes=$inodes /
     '';
   };
 }
