@@ -5,11 +5,12 @@ use tokio::process::Command;
 use warp::reject;
 use warp::Rejection;
 
-use crate::dispatch::redirect_symlink_to_boot;
+use crate::dispatch::{redirect_symlink_to_boot, NetbootIpxeTuning};
 use crate::webservercontext::{feature_disabled, server_error, WebserverContext};
 
 pub async fn serve_configuration(
     name: String,
+    tuning: NetbootIpxeTuning,
     context: WebserverContext,
 ) -> Result<impl warp::Reply, Rejection> {
     let config = context
@@ -63,6 +64,9 @@ chain /dispatch/configuration/{}",
 
     Ok(Builder::new()
         .status(302)
-        .header("Location", redirect_symlink_to_boot(&symlink)?.as_bytes())
+        .header(
+            "Location",
+            redirect_symlink_to_boot(&symlink, tuning)?.as_bytes(),
+        )
         .body(String::new()))
 }

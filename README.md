@@ -159,9 +159,10 @@ on a single closure involves recreating the CPIO and recompressing for
 every store path every time. This can add several minutes to cycle
 time.
 
-## Other APIs
+## Other API Information
 
 * Get the size of the initrd: `HEAD /boot/PATH/initrd`
+* Pass additional kernel commandline arguments: `/dispatch/...?cmdline_prefix_args=...&cmdline_suffix_args=...`
 
 ## Caveats
 
