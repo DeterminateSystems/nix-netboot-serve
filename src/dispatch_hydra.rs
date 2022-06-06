@@ -5,7 +5,7 @@ use http::response::Builder;
 use warp::reject;
 use warp::Rejection;
 
-use crate::dispatch::redirect_to_boot_store_path;
+use crate::dispatch::{redirect_to_boot_store_path, NetbootIpxeTuning};
 use crate::hydra;
 use crate::nix::realize_path;
 use crate::webservercontext::{server_error, WebserverContext};
@@ -15,6 +15,7 @@ pub async fn serve_hydra(
     project: String,
     jobset: String,
     job_name: String,
+    tuning: NetbootIpxeTuning,
     context: WebserverContext,
 ) -> Result<impl warp::Reply, Rejection> {
     let job = hydra::get_latest_job(&server, &project, &jobset, &job_name)
@@ -55,7 +56,7 @@ pub async fn serve_hydra(
             .status(302)
             .header(
                 "Location",
-                redirect_to_boot_store_path(Path::new(&output))?.as_bytes(),
+                redirect_to_boot_store_path(Path::new(&output), tuning)?.as_bytes(),
             )
             .body(String::new()))
     } else {

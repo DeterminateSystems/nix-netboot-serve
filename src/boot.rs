@@ -10,11 +10,15 @@ use warp::reject;
 use warp::Rejection;
 
 use crate::cpio::{make_load_cpio, LEADER_CPIO_BYTES, LEADER_CPIO_LEN};
+use crate::dispatch::NetbootIpxeTuning;
 use crate::files::open_file_stream;
 use crate::nix::get_closure_paths;
 use crate::webservercontext::{server_error, WebserverContext};
 
-pub async fn serve_ipxe(name: String) -> Result<impl warp::Reply, Rejection> {
+pub async fn serve_ipxe(
+    name: String,
+    tuning: NetbootIpxeTuning,
+) -> Result<impl warp::Reply, Rejection> {
     let params = Path::new("/nix/store").join(&name).join("kernel-params");
     let init = Path::new("/nix/store").join(&name).join("init");
     info!("Sending netboot.ipxe: {:?}", &name);
@@ -24,12 +28,14 @@ pub async fn serve_ipxe(name: String) -> Result<impl warp::Reply, Rejection> {
 echo Booting NixOS closure {name}. Note: initrd may stay pre-0% for a minute or two.
 
 
-kernel bzImage rdinit={init} {params}
+kernel bzImage rdinit={init} {pre_params} {params} {post_params}
 initrd initrd
 boot
 ",
         name = &name,
         init = init.display(),
+        pre_params = tuning.cmdline_prefix_args.unwrap_or("".to_string()),
+        post_params = tuning.cmdline_suffix_args.unwrap_or("".to_string()),
         params = fs::read_to_string(&params).await.map_err(|e| {
             warn!(
                 "Failed to load parameters from the generation at {:?}: {:?}",

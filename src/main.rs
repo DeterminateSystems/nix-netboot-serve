@@ -56,15 +56,20 @@ async fn main() {
 
     let root = warp::path::end().map(|| "nix-netboot-serve");
     let profile = warp::path!("dispatch" / "profile" / String)
+        .and(warp::query::<dispatch::NetbootIpxeTuning>())
         .and(with_context(webserver.clone()))
         .and_then(serve_profile);
     let configuration = warp::path!("dispatch" / "configuration" / String)
+        .and(warp::query::<dispatch::NetbootIpxeTuning>())
         .and(with_context(webserver.clone()))
         .and_then(serve_configuration);
     let hydra = warp::path!("dispatch" / "hydra" / String / String / String / String)
+        .and(warp::query::<dispatch::NetbootIpxeTuning>())
         .and(with_context(webserver.clone()))
         .and_then(serve_hydra);
-    let ipxe = warp::path!("boot" / String / "netboot.ipxe").and_then(serve_ipxe);
+    let ipxe = warp::path!("boot" / String / "netboot.ipxe")
+        .and(warp::query::<dispatch::NetbootIpxeTuning>())
+        .and_then(serve_ipxe);
     let initrd = warp::path!("boot" / String / "initrd")
         .and(with_context(webserver.clone()))
         .and_then(serve_initrd);
