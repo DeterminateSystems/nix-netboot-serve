@@ -60,13 +60,15 @@
 
       defaultPackage = forAllSystems ({ system, ... }: self.packages.${system}.package);
 
-      nixosModules.nix-netboot-serve = {
-        imports = [ ./nixos-module.nix ];
-        nixpkgs.overlays = [
-          (final: prev: {
-            nix-netboot-serve = self.defaultPackage."${final.stdenv.hostPlatform.system}";
-          })
-        ];
+      nixosModules = {
+        nix-netboot-serve = {
+          imports = [ ./nix-module/nix-netboot-serve-service.nix ];
+          nixpkgs.overlays = [
+            (final: prev: {
+              nix-netboot-serve = self.defaultPackage."${final.stdenv.hostPlatform.system}";
+            })
+          ];
+        };
       };
     };
 }
