@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 
 use crate::files::basename;
 
+#[cfg(unix)]
 fn make_archive_from_dir(path: PathBuf, out_path: &OsStr) -> std::io::Result<()> {
     let dir = WalkDir::new(path)
         .into_iter()
