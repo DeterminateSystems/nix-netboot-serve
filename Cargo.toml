@@ -23,3 +23,4 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = { version = "0.1.7", features = [ "io-util" ] }
 tokio-util = "0.6.7"
 warp = "0.3"
+walkdir = "2"
