@@ -134,7 +134,7 @@ mod tests {
         error::Error,
         fs::{read_to_string, remove_file, File},
         io::Write,
-        process::{Command},
+        process::Command,
     };
     use tempfile::NamedTempFile;
 
@@ -153,13 +153,9 @@ mod tests {
         ]);
         command.current_dir("/tmp");
         remove_file(file.path())?;
-        dbg!(&command);
         let out = command.output()?;
         assert_eq!(out.status.success(), true);
-        dbg!(String::from_utf8(out.stdout)?);
-        dbg!(String::from_utf8(out.stderr)?);
         let read_text = read_to_string(file.path())?;
-        dbg!(&read_text);
         assert_eq!(read_text, "Hello cpio!");
         remove_file(archive.path())?;
         Ok(())
@@ -187,15 +183,10 @@ mod tests {
         command.current_dir("/tmp");
         remove_file(&file1_path)?;
         remove_file(&file2_path)?;
-        dbg!(&command);
         let out = command.output()?;
         assert_eq!(out.status.success(), true);
-        dbg!(String::from_utf8(out.stdout)?);
-        dbg!(String::from_utf8(out.stderr)?);
         let read_text = read_to_string(&file1_path)?;
         let read_text2 = read_to_string(&file2_path)?;
-        dbg!(&read_text);
-        dbg!(&read_text2);
         assert_eq!(read_text, "Hello cpio!");
         assert_eq!(read_text2, "Hello cpio2!");
         remove_file(archive.path())?;
