@@ -1,11 +1,15 @@
 {
   description = "nix-netboot-serve";
 
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    cpiotools.url = "github:DeterminateSystems/cpiotools";
+  };
 
   outputs =
     { self
     , nixpkgs
+    , cpiotools
     , ...
     } @ inputs:
     let
@@ -28,6 +32,7 @@
           nixpkgs-fmt
           rustfmt
           vim # xxd
+          cpiotools.packages.${system}.package
         ]);
       }));
 
@@ -58,7 +63,8 @@
           nixos-test = import ./nixos-test.nix { inherit pkgs; inherit (self) nixosModules; } { inherit pkgs system; };
         });
 
-      defaultPackage = forAllSystems ({ system, ... }: self.packages.${system}.package);
+      defaultPackage = forAllSystems
+        ({ system, ... }: self.packages.${system}.package);
 
       nixosModules.nix-netboot-serve = {
         imports = [ ./nixos-module.nix ];
