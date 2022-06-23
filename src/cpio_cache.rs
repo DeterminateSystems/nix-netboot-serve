@@ -79,24 +79,36 @@ impl CpioCache {
             &final_dest
         );
 
+        let tdf = temp_dest.as_file().try_clone().unwrap();
+        let insidedest = temp_dest.path().to_path_buf();
+        let insidepath = path.to_path_buf();
+
         let mut compressor =
-            zstd::stream::write::Encoder::new(temp_dest.as_file(), 10).map_err(|e| {
+            zstd::stream::write::Encoder::new(tdf, 10).map_err(|e| CpioError::Io {
+                ctx: "Instantiating the zstd write-stream encoder",
+                src: insidepath.clone(),
+                dest: insidedest.clone(),
+                e,
+            })?;
+
+        let mut compressor = tokio::task::spawn_blocking(move || -> Result<_, CpioError> {
+            make_archive_from_dir(Path::new("/"), &insidepath, &mut compressor).map_err(|e| {
                 CpioError::Io {
-                    ctx: "Instantiating the zstd write-stream encoder",
-                    src: path.clone().to_path_buf(),
-                    dest: temp_dest.path().to_path_buf().clone(),
+                    ctx: "Constructing a CPIO",
+                    src: insidepath,
+                    dest: insidedest,
                     e,
                 }
             })?;
-        make_archive_from_dir(Path::new("/"), &path, &mut compressor).map_err(|e| {
-            CpioError::Io {
-                ctx: "Constructing a CPIO",
-                src: path.clone().to_path_buf(),
-                dest: temp_dest.path().to_path_buf().clone(),
-                e,
-            }
-        })?;
-        make_registration(&path, &mut compressor).await.map_err(CpioError::RegistrationError)?;
+
+            Ok(compressor)
+        })
+        .await
+        .unwrap()?;
+
+        make_registration(&path, &mut compressor)
+            .await
+            .map_err(CpioError::RegistrationError)?;
         compressor.finish().map_err(|e| CpioError::Io {
             ctx: "Finishing the zstd write-stream encoder",
             src: path.clone().to_path_buf(),
