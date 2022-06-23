@@ -669,6 +669,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "nix-cpio-generator"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffa4eaaf6ca9fc532831f101345d9c766216cc678184f440e94bedc1be0cdc26"
+dependencies = [
+ "bytes",
+ "cpio",
+ "futures",
+ "lazy_static",
+ "log",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "walkdir",
+ "zstd",
+]
+
+[[package]]
 name = "nix-netboot-serve"
 version = "0.1.0"
 dependencies = [
@@ -677,6 +696,7 @@ dependencies = [
  "http",
  "lazy_static",
  "log",
+ "nix-cpio-generator",
  "pretty_env_logger",
  "reqwest",
  "rlimit",

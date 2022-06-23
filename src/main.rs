@@ -1,6 +1,7 @@
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use nix_cpio_generator::cpio_cache::CpioCache;
 use structopt::StructOpt;
 use warp::Filter;
 
@@ -8,8 +9,6 @@ use warp::Filter;
 extern crate log;
 
 mod boot;
-mod cpio;
-mod cpio_cache;
 mod dispatch;
 mod dispatch_configuration;
 mod dispatch_hydra;
@@ -21,7 +20,6 @@ mod nofiles;
 mod options;
 mod webservercontext;
 use crate::boot::{serve_initrd, serve_ipxe, serve_kernel};
-use crate::cpio_cache::CpioCache;
 use crate::dispatch_configuration::serve_configuration;
 use crate::dispatch_hydra::serve_hydra;
 use crate::dispatch_profile::serve_profile;
