@@ -5,10 +5,9 @@ use std::sync::{Arc, RwLock};
 use tempfile::NamedTempFile;
 use tokio::fs::File;
 use tokio::io::BufReader;
-use tokio::process::Command;
 use tokio_util::io::ReaderStream;
 
-include!(concat!(env!("OUT_DIR"), "/make_cpio.rs"));
+use crate::cpio::{make_archive_from_dir, make_registration};
 
 #[derive(Clone)]
 pub struct CpioCache {
@@ -18,8 +17,6 @@ pub struct CpioCache {
 
 impl CpioCache {
     pub fn new(cache_dir: PathBuf) -> Result<Self, String> {
-        verify_exists()?;
-
         Ok(Self {
             cache: Arc::new(RwLock::new(HashMap::new())),
             cache_dir,
@@ -52,6 +49,7 @@ impl CpioCache {
         let cpio = Cpio::new(cached_location.clone())
             .await
             .map_err(|e| CpioError::Io {
+                ctx: "Loading a cached CPIO",
                 src: path.clone().to_path_buf(),
                 dest: cached_location,
                 e: e,
@@ -68,6 +66,7 @@ impl CpioCache {
     async fn make_cpio(&self, path: &Path) -> Result<Cpio, CpioError> {
         let final_dest = self.cache_path(&path)?;
         let temp_dest = NamedTempFile::new_in(&self.cache_dir).map_err(|e| CpioError::Io {
+            ctx: "Creating a new named temporary file.",
             src: path.clone().to_path_buf(),
             dest: final_dest.clone(),
             e: e,
@@ -79,21 +78,46 @@ impl CpioCache {
             &temp_dest,
             &final_dest
         );
-        let status = cpio_command(&path, &temp_dest.path())
-            .status()
-            .await
-            .map_err(|e| CpioError::Io {
-                src: path.clone().to_path_buf(),
-                dest: final_dest.clone(),
-                e: e,
+
+        let tdf = temp_dest.as_file().try_clone().unwrap();
+        let insidedest = temp_dest.path().to_path_buf();
+        let insidepath = path.to_path_buf();
+
+        let mut compressor =
+            zstd::stream::write::Encoder::new(tdf, 10).map_err(|e| CpioError::Io {
+                ctx: "Instantiating the zstd write-stream encoder",
+                src: insidepath.clone(),
+                dest: insidedest.clone(),
+                e,
             })?;
 
-        if !status.success() {
-            warn!("Failed to generate a CPIO for {:?}: {:?}", path, status);
-            return Err(CpioError::Failed);
-        }
+        let mut compressor = tokio::task::spawn_blocking(move || -> Result<_, CpioError> {
+            make_archive_from_dir(Path::new("/"), &insidepath, &mut compressor).map_err(|e| {
+                CpioError::Io {
+                    ctx: "Constructing a CPIO",
+                    src: insidepath,
+                    dest: insidedest,
+                    e,
+                }
+            })?;
+
+            Ok(compressor)
+        })
+        .await
+        .unwrap()?;
+
+        make_registration(&path, &mut compressor)
+            .await
+            .map_err(CpioError::RegistrationError)?;
+        compressor.finish().map_err(|e| CpioError::Io {
+            ctx: "Finishing the zstd write-stream encoder",
+            src: path.clone().to_path_buf(),
+            dest: temp_dest.path().to_path_buf().clone(),
+            e,
+        })?;
 
         temp_dest.persist(&final_dest).map_err(|e| CpioError::Io {
+            ctx: "Persisting the temporary file to the final location.",
             src: path.clone().to_path_buf(),
             dest: final_dest.clone(),
             e: e.error,
@@ -170,10 +194,11 @@ impl Cpio {
 #[derive(Debug)]
 pub enum CpioError {
     Io {
+        ctx: &'static str,
         src: PathBuf,
         dest: PathBuf,
         e: std::io::Error,
     },
+    RegistrationError(crate::cpio::MakeRegistrationError),
     Uncachable(String),
-    Failed,
 }

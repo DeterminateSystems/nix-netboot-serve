@@ -63,7 +63,7 @@ pub async fn serve_initrd(
     let mut cpio_makers = closure_paths
         .to_owned()
         .into_iter()
-        .map(|path| async { context.cpio_cache.dump_cpio(path).await })
+        .map(|path| context.cpio_cache.dump_cpio(path))
         .collect::<FuturesUnordered<_>>();
 
     let mut size: u64 = 0;
