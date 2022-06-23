@@ -8,6 +8,7 @@ use std::{convert::TryInto, fs::File};
 
 use cpio::{newc, write_cpio};
 use lazy_static::lazy_static;
+use tokio::process::Command;
 use walkdir::WalkDir;
 
 use crate::files::basename;
@@ -16,7 +17,7 @@ pub trait ReadSeek: std::io::Read + std::io::Seek {}
 impl<T: std::io::Read + std::io::Seek> ReadSeek for T {}
 
 #[cfg(unix)]
-fn make_archive_from_dir<W>(root: &Path, path: &Path, out: W) -> std::io::Result<()>
+pub fn make_archive_from_dir<W>(root: &Path, path: &Path, out: W) -> std::io::Result<()>
 where
     W: Write,
 {
@@ -108,6 +109,53 @@ fn make_leader_cpio() -> std::io::Result<Vec<u8>> {
     )?;
 
     Ok(leader_cpio.into_inner())
+}
+
+pub async fn make_registration<W>(path: &Path, dest: &mut W) -> Result<(), MakeRegistrationError>
+where
+    W: Write,
+{
+    let out = Command::new(env!("NIX_STORE_BIN"))
+        .arg("--dump-db")
+        .arg(&path)
+        .output()
+        .await
+        .map_err(MakeRegistrationError::Exec)?;
+    if !out.status.success() {
+        return Err(MakeRegistrationError::DumpDb(out.stderr));
+    }
+
+    let filename = path
+        .file_name()
+        .ok_or(MakeRegistrationError::NoFilename)?
+        .to_str()
+        .ok_or(MakeRegistrationError::FilenameInvalidUtf8)?;
+
+    cpio::write_cpio(
+        vec![(
+            cpio::newc::Builder::new(&format!(
+                "nix/.nix-netboot-serve-db/registration/{}",
+                filename
+            ))
+            .mode(0o0100500)
+            .nlink(1),
+            std::io::Cursor::new(out.stdout),
+        )]
+        .into_iter(),
+        dest,
+    )
+    .map_err(MakeRegistrationError::Io)?;
+
+    Ok(())
+}
+
+#[derive(Debug)]
+pub enum MakeRegistrationError {
+    Exec(std::io::Error),
+    DumpDb(Vec<u8>),
+    Io(std::io::Error),
+    NoFilename,
+    FilenameInvalidUtf8,
 }
 
 pub fn make_load_cpio(paths: &Vec<PathBuf>) -> Result<Vec<u8>, LoadCpioError> {
