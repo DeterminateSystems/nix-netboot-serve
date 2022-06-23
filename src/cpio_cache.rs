@@ -8,8 +8,6 @@ use tokio::io::BufReader;
 use tokio::process::Command;
 use tokio_util::io::ReaderStream;
 
-include!(concat!(env!("OUT_DIR"), "/make_cpio.rs"));
-
 #[derive(Clone)]
 pub struct CpioCache {
     cache_dir: PathBuf,
@@ -18,8 +16,6 @@ pub struct CpioCache {
 
 impl CpioCache {
     pub fn new(cache_dir: PathBuf) -> Result<Self, String> {
-        verify_exists()?;
-
         Ok(Self {
             cache: Arc::new(RwLock::new(HashMap::new())),
             cache_dir,
