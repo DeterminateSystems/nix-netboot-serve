@@ -7,7 +7,7 @@ license = "mit"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-cpio = "0.2.0"
+cpio = "0.2.2"
 futures = "0.3.16"
 http = "0.2.4"
 lazy_static = "1.4.0"
