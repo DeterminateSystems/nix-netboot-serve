@@ -1,7 +1,9 @@
 use std::ffi::{OsStr, OsString};
+use std::io::Cursor;
 use std::os::unix::ffi::OsStrExt;
+use std::os::unix::ffi::OsStringExt;
 use std::os::unix::fs::MetadataExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{convert::TryInto, fs::File};
 
 use cpio::{newc, write_cpio};
@@ -10,28 +12,53 @@ use walkdir::WalkDir;
 
 use crate::files::basename;
 
+pub trait ReadSeek: std::io::Read + std::io::Seek {}
+impl<T: std::io::Read + std::io::Seek> ReadSeek for T {}
+
 #[cfg(unix)]
-fn make_archive_from_dir(path: PathBuf, out_path: &OsStr) -> std::io::Result<()> {
+fn make_archive_from_dir(root: &Path, path: &Path, out_path: &OsStr) -> std::io::Result<()> {
+    path.strip_prefix(&root).unwrap_or_else(|_| {
+        panic!("Path {:?} is not inside root ({:?})", path, &root);
+    });
+
     let dir = WalkDir::new(path)
+        .sort_by(|a, b| a.file_name().cmp(b.file_name()))
         .into_iter()
         .filter_map(|entry| entry.ok())
-        .filter(|entry| {
-            let meta = entry.metadata();
-            meta.map(|x| x.is_file()).unwrap_or(false)
-        })
         .filter_map(|entry| {
-            let entry_name = entry.path().to_str()?;
+            let entry_name = entry
+                .path()
+                .strip_prefix(&root)
+                .unwrap_or_else(|_| {
+                    panic!("Path {:?} is not inside root ({:?})", entry.path(), &root)
+                })
+                .to_str()?;
             let meta = entry.metadata().ok()?;
             let built = newc::Builder::new(entry_name)
-                .dev_major(meta.dev().try_into().ok()?)
-                .rdev_major(meta.rdev().try_into().ok()?)
-                .gid(meta.gid())
-                .uid(meta.uid())
+                .dev_major(0)
+                .rdev_major(0)
+                .gid(1)
+                .uid(0)
                 .ino(meta.ino().try_into().ok()?)
                 .nlink(meta.nlink().try_into().ok()?)
                 .mode(meta.mode())
-                .mtime(meta.mtime().try_into().ok()?);
-            let readable_file = File::open(entry.path()).ok()?;
+                .mtime(1);
+
+            let readable_file: Box<dyn ReadSeek> = if meta.is_file() {
+                Box::new(File::open(entry.path()).ok()?)
+            } else if entry.path().is_symlink() {
+                Box::new(Cursor::new(
+                    entry
+                        .path()
+                        .read_link()
+                        .expect("TOCTTOU: is_symlink said this is a symlink")
+                        .into_os_string()
+                        .into_vec(),
+                ))
+            } else {
+                Box::new(std::io::empty())
+            };
+
             Some((built, readable_file))
         });
     let out_archive = File::create(out_path)?;
@@ -145,16 +172,23 @@ mod tests {
         let mut file = NamedTempFile::new()?;
         let archive = NamedTempFile::new()?;
         write!(file, "Hello cpio!")?;
-        make_archive_from_dir(file.path().to_path_buf(), archive.path().as_os_str())?;
+        make_archive_from_dir(
+            file.path().parent().unwrap(),
+            file.path(),
+            archive.path().as_os_str(),
+        )?;
         let mut command = Command::new("sh");
-        command.args([
-            "-c",
-            format!("cpio -iv < {:}", archive.path().display()).as_str(),
-        ]);
-        command.current_dir("/tmp");
+        command.args(["-c", "cpio -iv < \"$1\"", "--"]);
+        command.arg(archive.path());
+        command.current_dir(
+            archive
+                .path()
+                .parent()
+                .expect("Don't make / your tmp please"),
+        );
         remove_file(file.path())?;
         let out = command.output()?;
-        assert_eq!(out.status.success(), true);
+        assert!(out.status.success());
         let read_text = read_to_string(file.path())?;
         assert_eq!(read_text, "Hello cpio!");
         remove_file(archive.path())?;
