@@ -1,5 +1,5 @@
-use std::ffi::{OsStr, OsString};
-use std::io::Cursor;
+use std::ffi::OsString;
+use std::io::{Cursor, Write};
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::ffi::OsStringExt;
 use std::os::unix::fs::MetadataExt;
@@ -16,7 +16,10 @@ pub trait ReadSeek: std::io::Read + std::io::Seek {}
 impl<T: std::io::Read + std::io::Seek> ReadSeek for T {}
 
 #[cfg(unix)]
-fn make_archive_from_dir(root: &Path, path: &Path, out_path: &OsStr) -> std::io::Result<()> {
+fn make_archive_from_dir<W>(root: &Path, path: &Path, out: W) -> std::io::Result<()>
+where
+    W: Write,
+{
     path.strip_prefix(&root).unwrap_or_else(|_| {
         panic!("Path {:?} is not inside root ({:?})", path, &root);
     });
@@ -61,8 +64,7 @@ fn make_archive_from_dir(root: &Path, path: &Path, out_path: &OsStr) -> std::io:
 
             Some((built, readable_file))
         });
-    let out_archive = File::create(out_path)?;
-    write_cpio(dir, out_archive)?;
+    write_cpio(dir, out)?;
     Ok(())
 }
 
@@ -175,7 +177,7 @@ mod tests {
         make_archive_from_dir(
             file.path().parent().unwrap(),
             file.path(),
-            archive.path().as_os_str(),
+            File::create(archive.path())?,
         )?;
         let mut command = Command::new("sh");
         command.args(["-c", "cpio -iv < \"$1\"", "--"]);
