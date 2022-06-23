@@ -194,41 +194,4 @@ mod tests {
         remove_file(archive.path())?;
         Ok(())
     }
-
-    #[test]
-    fn test_multiple_file_archive() -> Result<(), Box<dyn Error>> {
-        let base_dir = tempfile::Builder::new().prefix("cpio-test").tempdir()?;
-        let file1_path = base_dir.path().join("test1");
-        let file2_path = base_dir.path().join("test2");
-        let mut file = File::create(&file1_path)?;
-        let mut file2 = File::create(&file2_path)?;
-        let archive = NamedTempFile::new()?;
-        write!(file, "Hello cpio!")?;
-        write!(file2, "Hello cpio2!")?;
-        make_archive_from_dir(
-            file1_path.parent().ok_or("No Parent?")?.to_path_buf(),
-            archive.path().as_os_str(),
-        )?;
-        let mut command = Command::new("sh");
-        command.args([
-            "-c",
-            format!("cpio -iv < {:}", archive.path().display()).as_str(),
-        ]);
-        command.current_dir("/tmp");
-        remove_file(&file1_path)?;
-        remove_file(&file2_path)?;
-        let out = command.output()?;
-        assert_eq!(out.status.success(), true);
-        let read_text = read_to_string(&file1_path)?;
-        let read_text2 = read_to_string(&file2_path)?;
-        assert_eq!(read_text, "Hello cpio!");
-        assert_eq!(read_text2, "Hello cpio2!");
-        remove_file(archive.path())?;
-        remove_file(&file1_path)?;
-        remove_file(&file2_path)?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiple_nested_file_archive() {}
 }
