@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use warp::reject;
 use warp::{Filter, Rejection};
 
-use crate::cpio_cache::CpioCache;
+use nix_cpio_generator::cpio_cache::CpioCache;
 
 #[derive(Clone)]
 pub struct WebserverContext {
