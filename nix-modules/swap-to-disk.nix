@@ -36,7 +36,10 @@
 
       echo 2 > /sys/module/raid0/parameters/default_layout
 
-      ${pkgs.util-linux}/bin/lsblk -d -e 1,7,11,230 -o PATH -n | ${pkgs.findutils}/bin/xargs ${pkgs.mdadm}/bin/mdadm /dev/md/spill.decrypted --create --level=0 --force --raid-devices=$(${pkgs.util-linux}/bin/lsblk -d -e 1,7,11,230 -o PATH -n | ${pkgs.busybox}/bin/wc -l)
+      ${pkgs.util-linux}/bin/lsblk -d -e 1,7,11,230 -o PATH -n > disklist
+      ${pkgs.coreutils}/bin/cat disklist
+      ${pkgs.coreutils}/bin/cat disklist | ${pkgs.findutils}/bin/xargs ${pkgs.mdadm}/bin/mdadm /dev/md/spill.decrypted --create --level=0 --force --raid-devices=$(${pkgs.coreutils}/bin/cat disklist | ${pkgs.busybox}/bin/wc -l)
+      rm disklist
       ${pkgs.cryptsetup}/bin/cryptsetup -c aes-xts-plain64 -d /dev/random create spill.encrypted /dev/md/spill.decrypted
 
       ${pkgs.util-linux}/bin/mkswap /dev/mapper/spill.encrypted
