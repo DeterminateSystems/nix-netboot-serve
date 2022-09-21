@@ -66,13 +66,19 @@
       defaultPackage = forAllSystems
         ({ system, ... }: self.packages.${system}.package);
 
-      nixosModules.nix-netboot-serve = {
-        imports = [ ./nixos-module.nix ];
-        nixpkgs.overlays = [
-          (final: prev: {
-            nix-netboot-serve = self.defaultPackage."${final.stdenv.hostPlatform.system}";
-          })
-        ];
+      nixosModules = {
+        nix-netboot-serve = {
+          imports = [ ./nix-modules/nix-netboot-serve-service.nix ];
+          nixpkgs.overlays = [
+            (final: prev: {
+              nix-netboot-serve = self.defaultPackage."${final.stdenv.hostPlatform.system}";
+            })
+          ];
+        };
+        no-filesystem = ./nix-modules/no-filesystem.nix;
+        register-nix-store = ./nix-modules/register-nix-store.nix;
+        swap-to-disk = ./nix-modules/swap-to-disk.nix;
+        tmpfs-root = ./nix-modules/tmpfs-root.nix;
       };
     };
 }
