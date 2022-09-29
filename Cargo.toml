@@ -8,7 +8,7 @@ license = "mit"
 
 [dependencies]
 cpio = "0.2.2"
-nix-cpio-generator = "0.1.1"
+nix-cpio-generator = "0.3.0"
 futures = "0.3.16"
 http = "0.2.4"
 lazy_static = "1.4.0"

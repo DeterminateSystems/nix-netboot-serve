@@ -48,7 +48,7 @@
               cpio
               nix
               zstd
-              pkgconfig
+              pkg-config
             ];
 
             buildInputs = with pkgs; [

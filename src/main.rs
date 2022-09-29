@@ -48,8 +48,12 @@ async fn main() {
         profile_dir: opt.profile_dir.map(check_dir_exists),
         configuration_dir: opt.config_dir.map(check_dir_exists),
         gc_root: check_dir_exists(opt.gc_root_dir),
-        cpio_cache: CpioCache::new(check_dir_exists(opt.cpio_cache_dir))
-            .expect("Cannot construct a CPIO Cache"),
+        cpio_cache: CpioCache::new(
+            check_dir_exists(opt.cpio_cache_dir),
+            None,
+            opt.max_cpio_cache_bytes,
+        )
+        .expect("Cannot construct a CPIO Cache"),
     };
 
     let root = warp::path::end().map(|| "nix-netboot-serve");

@@ -27,4 +27,8 @@ pub struct Opt {
     /// Number of open files to set the ulimit to
     #[structopt(long, default_value = "50000")]
     pub open_files: u64,
+
+    /// Size in bytes of how much space the CPIO cache is allowed to consume
+    #[structopt(long, default_value = "5368709120")] // 5 GiB in bytes
+    pub max_cpio_cache_bytes: u64,
 }
