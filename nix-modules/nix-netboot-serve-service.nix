@@ -28,6 +28,12 @@ in
         default = "/var/cache/nix-netboot-serve/cpios";
       };
 
+      cpio_cache_max_bytes = lib.mkOption {
+        type = lib.types.int;
+        description = "Maximum amount of space the CPIO cache may take up, in bytes.";
+        default = 5 * 1024 * 1024 * 1024;
+      };
+
       listen = lib.mkOption {
         type = lib.types.str;
         default = "0.0.0.0:3030";
@@ -67,6 +73,7 @@ in
           (lib.escapeShellArgs (
             [ "--gc-root-dir" cfg.gc_root_dir ]
               ++ [ "--cpio-cache-dir" cfg.cpio_cache_dir ]
+              ++ [ "--max-cpio-cache-bytes" cfg.cpio_cache_max_bytes ]
               ++ [ "--listen" cfg.listen ]
               ++ (lib.optionals (cfg.profile_dir != null) [ "--profile-dir" cfg.profile_dir ])
               ++ (lib.optionals (cfg.configuration_dir != null) [ "--config-dir" cfg.configuration_dir ])
