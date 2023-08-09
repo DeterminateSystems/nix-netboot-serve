@@ -1,5 +1,5 @@
 {
-  description = "nix-netboot-serve";
+  description = "Make any NixOS system netbootable with 10s cycle times.";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
