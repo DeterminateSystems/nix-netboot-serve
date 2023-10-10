@@ -2,7 +2,7 @@
   description = "Make any NixOS system netbootable with 10s cycle times.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1.533189.tar.gz";
     cpiotools.url = "github:DeterminateSystems/cpiotools";
   };
 
