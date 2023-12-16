@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1655642194,
-        "narHash": "sha256-PHF4K1sLixSDM7lvMpuCj4ygLHGEZFQzzGIGMhsE8K0=",
+        "lastModified": 1702755016,
+        "narHash": "sha256-avRrxBjC+z3XcKjosv6vzRlyDRNIKt/Dw7/pEzcTvYY=",
         "owner": "DeterminateSystems",
         "repo": "cpiotools",
-        "rev": "926af143c453d387b585c52d5004fb5fe70fe730",
+        "rev": "189f7f5f672eb496bbba441aca1cdb208cb592ec",
         "type": "github"
       },
       "original": {

@@ -32,7 +32,7 @@
           nixpkgs-fmt
           rustfmt
           vim # xxd
-          # cpiotools.packages.${system}.package
+          cpiotools.packages.${system}.package
         ]);
       }));
 
